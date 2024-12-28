@@ -1,21 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-    <title>Todoトラッカー</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo Tracker - Component Version</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .task { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .task input { margin-right: 10px; }
+    .priority { font-weight: bold; }
+    .low { color: green; }
+    .medium { color: orange; }
+    .high { color: red; }
+    .filters, .form { margin-bottom: 20px; }
+  </style>
 </head>
 <body>
-    <div id="app">
-        <h1>Todoトラッカー</h1>
-        <form id="task-form">
-            <input type="text" id="task-input" placeholder="タスクを入力..." required>
-            <input type="date" id="deadline-input" required>
-            <button type="submit">追加</button>
-        </form>
-        <ul id="task-list"></ul>
-    </div>
-    <script src="script.js"></script>
+  <h1>Todo Tracker</h1>
+  <div id="app"></div>
+
+  <script>
+    class TodoApp {
+      constructor(rootElement) {
+        this.rootElement = rootElement;
+        this.tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        this.render();
+      }
+
+      saveTasks() {
+        localStorage.setItem('tasks', JSON.stringify(this.tasks));
+      }
+
+      addTask(task) {
+        this.tasks.push(task);
+        this.saveTasks();
+        this.render();
+      }
+
+      deleteTask(index) {
+        this.tasks.splice(index, 1);
+        this.saveTasks();
+        this.render();
+      }
+
+      updateTaskStatus(index) {
+        const statuses = ['Not Started', 'In Progress', 'Completed'];
+        const task = this.tasks[index];
+        const currentIndex = statuses.indexOf(task.status);
+        task.status = statuses[(currentIndex + 1) % statuses.length];
+        this.saveTasks();
+        this.render();
+      }
+
+      filterTasks(category) {
+        this.render(category);
+      }
+
+      render(filter = 'all') {
+        this.rootElement.innerHTML = '';
+        this.renderForm();
+        this.renderFilters();
+        this.renderTaskList(filter);
+      }
+
+      renderForm() {
+        const form = document.createElement('div');
+        form.className = 'form';
+        form.innerHTML = `
+          <input id="task-name" type="text" placeholder="Task name">
+          <select id="category">
+            <option value="Work">Work</option>
+            <option value="Personal">Personal</option>
+            <option value="Study">Study</option>
+          </select>
+          <select id="priority">
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+          <button id="add-task-btn">Add Task</button>
+        `;
+        this.rootElement.appendChild(form);
+
+        document.getElementById('add-task-btn').onclick = () => {
+          const name = document.getElementById('task-name').value;
+          const category = document.getElementById('category').value;
+          const priority = document.getElementById('priority').value;
+
+          if (!name) {
+            alert('Task name is required!');
+            return;
+          }
+
+          this.addTask({
+            name,
+            category,
+            priority,
+            status: 'Not Started',
+            deadline: new Date(Date.now() + 86400000).toISOString() // Default deadline: 1 day from now
+          });
+
+          document.getElementById('task-name').value = '';
+        };
+      }
+
+      renderFilters() {
+        const filters = document.createElement('div');
+        filters.className = 'filters';
+        filters.innerHTML = `
+          <button onclick="todoApp.filterTasks('all')">All</button>
+          <button onclick="todoApp.filterTasks('Work')">Work</button>
+          <button onclick="todoApp.filterTasks('Personal')">Personal</button>
+          <button onclick="todoApp.filterTasks('Study')">Study</button>
+        `;
+        this.rootElement.appendChild(filters);
+      }
+
+      renderTaskList(filter) {
+        const taskList = document.createElement('div');
+        taskList.id = 'task-list';
+
+        this.tasks
+          .filter(task => filter === 'all' || task.category === filter)
+          .forEach((task, index) => {
+            const taskDiv = document.createElement('div');
+            taskDiv.className = 'task';
+
+            const priorityClass = task.priority.toLowerCase();
+            taskDiv.innerHTML = `
+              <span class="priority ${priorityClass}">${task.priority}</span>
+              <span>${task.name} (${task.category})</span>
+              <span>Status: ${task.status}</span>
+              <button onclick="todoApp.updateTaskStatus(${index})">Next Status</button>
+              <button onclick="todoApp.deleteTask(${index})">Delete</button>
+            `;
+            taskList.appendChild(taskDiv);
+          });
+
+        this.rootElement.appendChild(taskList);
+      }
+    }
+
+    const appContainer = document.getElementById('app');
+    const todoApp = new TodoApp(appContainer);
+  </script>
 </body>
 </html>
